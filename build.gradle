@@ -1,8 +1,4 @@
 
-//tesdsfgsdfszafgasfggsdgssadfasdffafddfsgsddgsdgfdfgsfgasdfaf
-//  sf
-
-
 apply plugin: 'java'
 
 defaultTasks "build"
