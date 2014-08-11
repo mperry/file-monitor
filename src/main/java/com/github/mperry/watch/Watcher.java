@@ -1,5 +1,6 @@
 package com.github.mperry.watch;
 
+import com.github.mperry.Util;
 import fj.*;
 import fj.data.*;
 import org.slf4j.Logger;
@@ -46,7 +47,7 @@ public class Watcher {
 		log.info("size: " + eventList.length() + " " + eventList.map(we -> String.format("Service event, kind: %s path: %s", we.kind(), we.context())).toString());
 	}
 
-	static List<WatchEvent.Kind<Path>> ALL_EVENTS = List.list(ENTRY_CREATE, ENTRY_DELETE, ENTRY_MODIFY);
+//	static List<WatchEvent.Kind<Path>> ALL_EVENTS = List.list(ENTRY_CREATE, ENTRY_DELETE, ENTRY_MODIFY);
 
 	public static P2<WatchService, P1<Stream<WatchEvent<Path>>>> stream(File dir, List<WatchEvent.Kind<Path>> list) {
 
@@ -71,13 +72,27 @@ public class Watcher {
 		return null;
 	}
 
+	static Option<WatchKey> take(WatchService s) {
+		try {
+			return Option.fromNull(s.take());
+		} catch (InterruptedException e) {
+			return Option.<WatchKey>none();
+		}
+	}
+
 	public static P1<Stream<WatchEvent<Path>>> stream(final WatchService s) {
 		return P.lazy(u -> {
 			Stream<WatchEvent<Path>> empty = Stream.nil();
 //			try {
 				log.info("Polling WatchService events...");
-//				Option<WatchKey> optKey = Option.fromNull(s.take());
-				Option<WatchKey> optKey = Option.fromNull(s.poll());
+			Option<WatchKey> optKey = take(s);
+//			null;
+//			try {
+//				optKey = Option.fromNull(s.take());
+//			} catch (InterruptedException e) {
+//				e.printStackTrace();
+//			}
+//				Option<WatchKey> optKey = Option.fromNull(s.poll());
 				log.info("Finished polling.");
 				return optKey.map(key -> {
 					Stream<WatchEvent<Path>> result = empty;
@@ -103,7 +118,7 @@ public class Watcher {
 	}
 
 	public static Unit watch() {
-		watch(DEFAULT_DIR, ALL_EVENTS);
+		watch(DEFAULT_DIR, Util.ALL_EVENTS);
 		return unit();
 	}
 
