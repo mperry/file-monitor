@@ -39,64 +39,66 @@ public class Watcher {
 	}
 
 	static void watch(File dir, List<WatchEvent.Kind<Path>> list) {
-		P1<Stream<WatchEvent<Path>>> p = stream(dir, list);
-		Stream<WatchEvent<Path>> s = p._1();
+		P2<WatchService, P1<Stream<WatchEvent<Path>>>> p = stream(dir, list);
+
+		Stream<WatchEvent<Path>> s = p._2()._1();
 		List<WatchEvent<Path>> eventList = s.take(5).toList();
 		log.info("size: " + eventList.length() + " " + eventList.map(we -> String.format("Service event, kind: %s path: %s", we.kind(), we.context())).toString());
 	}
 
 	static List<WatchEvent.Kind<Path>> ALL_EVENTS = List.list(ENTRY_CREATE, ENTRY_DELETE, ENTRY_MODIFY);
 
-	public static P1<Stream<WatchEvent<Path>>> stream(File dir, List<WatchEvent.Kind<Path>> list) {
+	public static P2<WatchService, P1<Stream<WatchEvent<Path>>>> stream(File dir, List<WatchEvent.Kind<Path>> list) {
 
 		try {
 			WatchService s = getDefault().newWatchService();
-			return P.<Stream<WatchEvent<Path>>>lazy(u -> {
+			return P.p(s, P.lazy(u -> {
 				try {
 					Path dirPath = dir.toPath();
 					for (WatchEvent.Kind<Path> k : list) {
 						dirPath.register(s, k);
 					}
-//					P1<Stream<WatchEvent<Path>>> stream = stream(s);
 					return stream(s)._1();
 				} catch (IOException e) {
 					log.error(e.getMessage(), e);
 				}
 				return Stream.<WatchEvent<Path>>nil();
-			});
+			}));
 
 		} catch (IOException e) {
 			log.error(e.getMessage(), e);
 		}
 		return null;
-
 	}
 
 	public static P1<Stream<WatchEvent<Path>>> stream(final WatchService s) {
 		return P.lazy(u -> {
-			Stream<WatchEvent<Path>> result = Stream.nil();
-			try {
+			Stream<WatchEvent<Path>> empty = Stream.nil();
+//			try {
 				log.info("Polling WatchService events...");
-				WatchKey key = s.take();
+//				Option<WatchKey> optKey = Option.fromNull(s.take());
+				Option<WatchKey> optKey = Option.fromNull(s.poll());
 				log.info("Finished polling.");
-
-				for (WatchEvent<?> event : key.pollEvents()) {
-					WatchEvent<Path> we = (WatchEvent<Path>) event;
-					result = result.snoc(we);
-				}
-
-				boolean b = key.reset();
-				if (!b) {
-					log.error(String.format("Key %s is invalid"), key);
-
-				}
+				return optKey.map(key -> {
+					Stream<WatchEvent<Path>> result = empty;
+					for (WatchEvent<?> event : key.pollEvents()) {
+						WatchEvent<Path> we = (WatchEvent<Path>) event;
+						result = result.snoc(we);
+					}
+					boolean b = key.reset();
+					if (!b) {
+						log.error(String.format("Key %s is invalid"), key);
+					}
+					return result.append(stream(s));
+//					return result;
+				}).orSome(empty);
 //				return Stream.stream(key.pollEvents().toArray(new WatchEvent[0])).append(stream(s));
-				result = result.append(stream(s));
 
-			} catch (InterruptedException e) {
-				log.error(e.getMessage(), e);
-			}
-			return result;
+//			} catch (InterruptedException e) {
+//				log.info(e.getMessage(), e);
+//				return Stream.<WatchEvent<Path>>nil();
+//			}
+//			return empty;
 		});
 	}
 

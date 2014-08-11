@@ -21,26 +21,6 @@ public class Test1 {
 	}
 
 
-	@Test
-	public void test2() {
-
-		Object[] is = new Integer[]{1, 2, 3};
-//		Integer[] is2 = (Integer []) Watcher.<Integer, Integer>toArrayInit(new Integer[]{1, 2, 3}, Integer.class);
-//		String s = Arrays.toString(is2);
-//		System.out.println(is2);
-//		System.out.println(s);
-
-
-//		Integer[] arr = Test1.toArray(List.list(1, 2, 3));
-		Integer[] arr = Test1.toArrayInit(List.list(1, 2, 3));
-		System.out.println(Arrays.toString(arr));
-
-	}
-
-	public static <A> A[] toArray(final fj.data.List<A> list) {
-		return toArrayInit(list);
-	}
-
 
 	public static <A> A[] toArrayInit(final fj.data.List<A> list, A... args) {
 //		A[] array =  Arrays.copyOf(args, list.length());
