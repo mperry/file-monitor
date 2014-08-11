@@ -30,19 +30,12 @@ public class Watcher {
 
 	static Logger log = LoggerFactory.getLogger(Watcher.class);
 
-
 	public static <K, V> Map<K, V> create(P2<K, V>... args) {
 		Map m = new HashMap<K, V>();
 		for (P2<K, V> p: args) {
 			m.put(p._1(), p._2());
 		}
 		return m;
-	}
-
-	public static <C, T extends C> C[] toArray(java.util.List<T> list, Class<C> componentType) {
-		@SuppressWarnings("unchecked")
-		C[] array = (C[]) Array.newInstance(componentType, list.size());
-		return list.toArray(array);
 	}
 
 	static void watch(File dir, List<WatchEvent.Kind<Path>> list) {
@@ -107,93 +100,11 @@ public class Watcher {
 		});
 	}
 
-
-	public static Unit watch2(File dir, Map<WatchEvent.Kind<Path>, F<Path, Unit>> m) {
-//		WatchService s = null;
-		try (WatchService s = getDefault().newWatchService()) {
-//			s = FileSystems.getDefault().newWatchService();
-			Path dirPath = dir.toPath();
-			for (WatchEvent.Kind<Path> k: m.keySet()) {
-				dirPath.register(s, k);
-			}
-			while (true) {
-				WatchKey key = s.take();
-				for (WatchEvent<?> event: key.pollEvents()) {
-					WatchEvent<Path> we = (WatchEvent<Path>) event;
-					Path p1 = we.context();
-					log.info(String.format("Service event, kind: %s path: %s", we.kind(), p1));
-					Option<F<Path, Unit>> o = Option.fromNull(m.get(we.kind()));
-					o.map(f -> f.f(p1));
-				}
-				key.reset();
-			}
-		} catch (IOException e) {
-			log.error(e.getMessage(), e);
-		} catch (InterruptedException e) {
-			log.error(e.getMessage(), e);
-		} finally {
-//			try {
-//				if (s != null) {
-//					s.close();
-//				}
-//			} catch (IOException e) {
-//				log.error(e.getMessage(), e);
-//			}
-		}
-		return unit();
-	}
-
 	public static Unit watch() {
 		watch(DEFAULT_DIR, ALL_EVENTS);
 		return unit();
 	}
 
-
-	public static Unit watch1() {
-		WatchService s = null;
-		try {
-			s = getDefault().newWatchService();
-			Path p = getDefault().getPath(DEFAULT_PATH);
-			p.register(s, ENTRY_CREATE, ENTRY_DELETE, ENTRY_MODIFY);
-
-			int n = 10;
-			for (int i = 0; i < n; i++) {
-//				log.info("Hello world");
-//				Thread.sleep(1000);
-				WatchKey key = s.take();
-//				WatchKey key = null;
-				for (WatchEvent<?> event: key.pollEvents()) {
-					WatchEvent.Kind<?> kind = event.kind();
-					Path p1 = ((WatchEvent<Path>) event).context();
-					log.info(String.format("Service event, kind: %s path: %s", kind, p1));
-					if (kind == ENTRY_CREATE) {
-
-					} else {
-
-					}
-				}
-				key.reset();
-			}
-
-
-		} catch (IOException e) {
-			log.error(e.getMessage(), e);
-
-		} catch (InterruptedException e) {
-			log.error(e.getMessage(), e);
-
-		} finally {
-
-			try {
-				s.close();
-			} catch (IOException e) {
-				log.error(e.getMessage(), e);
-//				e.printStackTrace();
-			}
-		}
-		return unit();
-
-	}
 
 
 }
