@@ -78,7 +78,8 @@ public class Test3 {
             log.info("unsubscribed");
 //			Thread.sleep(10000);
         } catch (IOException e) {
-            e.printStackTrace();
+			log.error(e.getMessage(), e);
+//            e.printStackTrace();
         } catch (InterruptedException e) {
             log.error(e.getMessage(), e);
         }
@@ -113,7 +114,8 @@ public class Test3 {
             s.unsubscribe();
             log.info("unsubscribed");
         } catch (IOException e) {
-            e.printStackTrace();
+			log.error(e.getMessage(), e);
+//            e.printStackTrace();
 //        } catch (InterruptedException e) {
 //            log.error(e.getMessage(), e);
         }

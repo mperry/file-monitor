@@ -54,6 +54,7 @@ public class Rx {
 					for (WatchEvent<?> e: k.pollEvents()) {
 						WatchEvent<Path> we = (WatchEvent<Path>) e;
 						if (sub.isUnsubscribed()) {
+							sub.onCompleted();
 							return;
 						}
 						sub.onNext(we);
@@ -65,7 +66,9 @@ public class Rx {
 					}
 				}
 			} catch (InterruptedException e) {
-				sub.onError(e);
+				log.info("interrupted in take");
+				sub.onCompleted();
+//				sub.onError(e);
 			}
 		};
 		return Observable.create(os);
