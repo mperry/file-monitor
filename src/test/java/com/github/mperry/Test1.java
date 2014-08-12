@@ -1,6 +1,6 @@
 package com.github.mperry;
 
-import com.github.mperry.watch.Watcher;
+//import com.github.mperry.watch.Watcher;
 import fj.P;
 import fj.P2;
 import fj.data.List;

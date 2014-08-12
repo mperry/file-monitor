@@ -1,13 +1,12 @@
 package com.github.mperry.watch;
 
 import com.sun.nio.file.SensitivityWatchEventModifier;
-import fj.P;
-import fj.P1;
-import fj.P2;
+import fj.*;
 import fj.data.Java;
 import fj.data.List;
 import fj.data.Option;
 import fj.data.Stream;
+import org.apache.commons.lang3.SystemUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import rx.Observable;
@@ -28,14 +27,15 @@ public class Rx {
 
 	static final Logger log = Util.logger(Rx.class);
 
-    public static final String DEFAULT_PATH = "/Users/mperry/repositories/file-monitor";
-    public static final File DEFAULT_DIR = new File(DEFAULT_PATH);
+    public static final String DEFAULT_PATH = SystemUtils.IS_OS_UNIX ? "/Users/mperry/repositories/file-monitor" : "D:/repositories/file-monitor";
 
+    public static final File DEFAULT_DIR = new File(DEFAULT_PATH);
+	static final SensitivityWatchEventModifier SENSITIVITY = SensitivityWatchEventModifier.HIGH;
 
     public static WatchService register(File dir, List<WatchEvent.Kind<Path>> list) throws IOException {
 		WatchService s = FileSystems.getDefault().newWatchService();
         // ignore k (below) for now
-        WatchKey k = dir.toPath().register(s, list.toCollection().toArray(new WatchEvent.Kind[list.length()]), SensitivityWatchEventModifier.HIGH);
+        WatchKey k = dir.toPath().register(s, list.toCollection().toArray(new WatchEvent.Kind[list.length()]), SENSITIVITY);
 		return s;
 	}
 
@@ -75,6 +75,10 @@ public class Rx {
 		return P.lazy(u -> Observable.from(stream(s)._1()));
 	}
 
+	public static P1<Observable<WatchEvent<Path>>> observable2(final WatchService s) {
+		return observableOpt(s).map(o -> mapFilter(o, Function.identity()));
+	}
+
     public static P1<Observable<Option<WatchEvent<Path>>>> observableOpt(final WatchService s) {
         return P.lazy(u -> Observable.from(streamOpt(s)._1()));
     }
@@ -82,12 +86,8 @@ public class Rx {
     public static P1<Stream<WatchEvent<Path>>> stream(final WatchService s) {
         return P.lazy(u -> {
             final Stream<WatchEvent<Path>> empty = Stream.nil();
-
-
-//            log.info(format("Polling WatchService events on thread %d..." + threadId(), threadId()));
             Util.printThread();
             Option<WatchKey> optKey = take(s);
-//            log.info("Finished polling.");
             return optKey.map(key -> {
                 Stream<WatchEvent<Path>> result = empty;
                 for (WatchEvent<?> event : key.pollEvents()) {
@@ -128,7 +128,6 @@ public class Rx {
         });
     }
 
-
     static Option<WatchKey> take(WatchService s) {
         try {
             return Option.fromNull(s.take());
@@ -141,6 +140,23 @@ public class Rx {
         WatchService s2 = register(dir, list);
         return P.p(s2, stream(s2));
     }
+
+	public static <A, B> Observable<B> flatMap(Observable<Option<A>> o, F<A, Observable<B>> f) {
+		return o.flatMap(oa -> {
+			return oa.isNone() ? Observable.empty() : f.f(oa.some());
+		});
+	}
+
+	public static <A, B> Observable<B> mapFilter(Observable<A> o, F<A, Boolean> predicate, F<A, B> transform) {
+		return o.flatMap(a -> {
+			return !predicate.f(a) ? Observable.empty() : Observable.just(transform.f(a));
+		});
+	}
+
+	public static <A, B> Observable<B> mapFilter(Observable<Option<A>> o, F<A, B> f) {
+
+		return mapFilter(o, oa -> oa.isSome(), oa -> f.f(oa.some()));
+	}
 
 }
 
