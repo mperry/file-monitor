@@ -19,6 +19,8 @@ import static java.nio.file.StandardWatchEventKinds.ENTRY_MODIFY;
  */
 public class Util {
 
+    public static final Logger log = logger(Util.class);
+
 	public static final List<WatchEvent.Kind<Path>> ALL_EVENTS = List.list(ENTRY_CREATE, ENTRY_DELETE, ENTRY_MODIFY);
 
     public static <K, V> Map<K, V> create(P2<K, V>... args) {
@@ -33,5 +35,12 @@ public class Util {
         return LoggerFactory.getLogger(clazz);
     }
 
+    public static void printThread() {
+        log.info("Thread id: " + Thread.currentThread().getId());
+    }
+
+    public static long threadId() {
+        return Thread.currentThread().getId();
+    }
 
 }

@@ -15,6 +15,8 @@ import java.io.IOException;
 import java.nio.file.Path;
 import java.nio.file.WatchEvent;
 
+import static com.github.mperry.watch.Util.printThread;
+
 
 /**
  * Created by mperry on 12/08/2014.
@@ -83,29 +85,31 @@ public class Test3 {
     }
 
 
+
     @Test
     public void test3() {
         try {
+//            log.info("Running test on thread id: " + Util.threadId());
+//            printThread();
             log.info("create observable...");
             P1<Observable<Option<WatchEvent<Path>>>> o1 = Rx.observableOpt(Rx.register(Rx.DEFAULT_DIR, Util.ALL_EVENTS));
             log.info("set subscribe on...");
-            Observable<Option<WatchEvent<Path>>> o2  = o1._1().filter(opt -> opt.isSome()).subscribeOn(Schedulers.io());
+            Observable<Option<WatchEvent<Path>>> o2  = o1._1().subscribeOn(Schedulers.io());
             log.info("subscribing...");
             Subscription s = o2.subscribe(option -> {
                 if (option.isNone()) {
                     println("Option is none");
                 }
                 option.map(we -> {
-                    println(String.format("context: %s, kind: %s", we.context(), we.kind()));
+                    println(String.format("thread: %d, kind: %s, context: %s", Util.threadId(), we.kind(), we.context()));
                     return we;
                 });
             });
             log.info("subscribed");
             log.info("sleeping...");
-            sleep(2000);
-//            Thread.sleep(5000);
+            sleep(5000);
             log.info("done sleeping");
-//            s.unsubscribe();
+            s.unsubscribe();
             log.info("unsubscribed");
         } catch (IOException e) {
             e.printStackTrace();

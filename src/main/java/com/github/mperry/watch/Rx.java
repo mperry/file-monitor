@@ -1,8 +1,10 @@
 package com.github.mperry.watch;
 
+import com.sun.nio.file.SensitivityWatchEventModifier;
 import fj.P;
 import fj.P1;
 import fj.P2;
+import fj.data.Java;
 import fj.data.List;
 import fj.data.Option;
 import fj.data.Stream;
@@ -14,6 +16,7 @@ import java.io.File;
 import java.io.IOException;
 import java.nio.file.*;
 
+import static com.github.mperry.watch.Util.threadId;
 import static java.lang.String.format;
 import static java.nio.file.FileSystems.getDefault;
 //import java.util.List;
@@ -31,10 +34,8 @@ public class Rx {
 
     public static WatchService register(File dir, List<WatchEvent.Kind<Path>> list) throws IOException {
 		WatchService s = FileSystems.getDefault().newWatchService();
-		Path p = dir.toPath();
-		for (WatchEvent.Kind<Path> k: list) {
-			p.register(s, k);
-		}
+        // ignore k (below) for now
+        WatchKey k = dir.toPath().register(s, list.toCollection().toArray(new WatchEvent.Kind[list.length()]), SensitivityWatchEventModifier.HIGH);
 		return s;
 	}
 
@@ -47,9 +48,9 @@ public class Rx {
 		Observable.OnSubscribe<WatchEvent<Path>> os = sub -> {
 			try {
 				while (true) {
-                    log.info("Polling WatchService events...");
+//                    log.info("Polling WatchService events...");
                     WatchKey k = s.take();
-                    log.info("Finished polling.");
+//                    log.info("Finished polling.");
 					for (WatchEvent<?> e: k.pollEvents()) {
 						WatchEvent<Path> we = (WatchEvent<Path>) e;
 						if (sub.isUnsubscribed()) {
@@ -82,9 +83,11 @@ public class Rx {
         return P.lazy(u -> {
             final Stream<WatchEvent<Path>> empty = Stream.nil();
 
-            log.info("Polling WatchService events...");
+
+//            log.info(format("Polling WatchService events on thread %d..." + threadId(), threadId()));
+            Util.printThread();
             Option<WatchKey> optKey = take(s);
-            log.info("Finished polling.");
+//            log.info("Finished polling.");
             return optKey.map(key -> {
                 Stream<WatchEvent<Path>> result = empty;
                 for (WatchEvent<?> event : key.pollEvents()) {
@@ -105,9 +108,9 @@ public class Rx {
         return P.lazy(u -> {
             return Stream.cons(Option.<WatchEvent<Path>>none(), P.lazy(u2 -> {
                 final Stream<Option<WatchEvent<Path>>> empty = Stream.nil();
-                log.info("Polling WatchService events...");
+//                log.info(format("Polling WatchService events on %s...", threadId()));
                 Option<WatchKey> optKey = take(s);
-                log.info("Finished polling.");
+//                log.info("Finished polling.");
                 return optKey.map(key -> {
                     Stream<Option<WatchEvent<Path>>> result = empty;
                     for (WatchEvent<?> event : key.pollEvents()) {
