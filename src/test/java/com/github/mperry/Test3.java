@@ -56,7 +56,8 @@ public class Test3 {
 //        println("done");
     }
 
-    @Test
+//    @Test
+    // WARNING: does not end without input from user
     public void test2() {
         try {
             log.info("create observable...");
@@ -88,7 +89,7 @@ public class Test3 {
             log.info("create observable...");
             P1<Observable<Option<WatchEvent<Path>>>> o1 = Rx.observableOpt(Rx.register(Rx.DEFAULT_DIR, Util.ALL_EVENTS));
             log.info("set subscribe on...");
-            Observable<Option<WatchEvent<Path>>> o2  = o1._1().subscribeOn(Schedulers.io());
+            Observable<Option<WatchEvent<Path>>> o2  = o1._1().filter(opt -> opt.isSome()).subscribeOn(Schedulers.io());
             log.info("subscribing...");
             Subscription s = o2.subscribe(option -> {
                 if (option.isNone()) {
@@ -101,10 +102,10 @@ public class Test3 {
             });
             log.info("subscribed");
             log.info("sleeping...");
-            sleep(20000);
+            sleep(2000);
 //            Thread.sleep(5000);
             log.info("done sleeping");
-            s.unsubscribe();
+//            s.unsubscribe();
             log.info("unsubscribed");
         } catch (IOException e) {
             e.printStackTrace();

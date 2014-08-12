@@ -7,6 +7,7 @@ import org.junit.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import rx.Observable;
+import rx.schedulers.Schedulers;
 
 import java.io.File;
 import java.io.IOException;
@@ -37,7 +38,7 @@ public class Test2 {
 		return Rx.create(dir, Util.ALL_EVENTS);
 	}
 
-	@Test
+//	@Test
 	public void test2() throws IOException {
 		P2<WatchService, Observable<WatchEvent<Path>>> p = create();
 
@@ -55,7 +56,8 @@ public class Test2 {
 	public void test3() throws IOException {
 		P2<WatchService, Observable<WatchEvent<Path>>> p = create();
 		println("subscribing...");
-		p._2().subscribe(we -> printWatchEvent(we), t -> println(t), () -> println("completed"));
+
+		p._2().subscribeOn(Schedulers.computation()).subscribe(we -> printWatchEvent(we), t -> println(t), () -> println("completed"));
 		println("subscribed");
 
 
@@ -64,7 +66,7 @@ public class Test2 {
 		p._1().close();
 	}
 
-	@Test
+//	@Test
 	public void test4() throws IOException {
 		File dir = new File(".");
 		println(String.format("monitoring dir: %s", dir.getAbsolutePath()));

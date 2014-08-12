@@ -47,7 +47,9 @@ public class Rx {
 		Observable.OnSubscribe<WatchEvent<Path>> os = sub -> {
 			try {
 				while (true) {
-					WatchKey k = s.take();
+                    log.info("Polling WatchService events...");
+                    WatchKey k = s.take();
+                    log.info("Finished polling.");
 					for (WatchEvent<?> e: k.pollEvents()) {
 						WatchEvent<Path> we = (WatchEvent<Path>) e;
 						if (sub.isUnsubscribed()) {
@@ -100,7 +102,7 @@ public class Rx {
     }
 
     public static P1<Stream<Option<WatchEvent<Path>>>> streamOpt(final WatchService s) {
-        return P.<Stream<Option<WatchEvent<Path>>>>lazy(u -> {
+        return P.lazy(u -> {
             return Stream.cons(Option.<WatchEvent<Path>>none(), P.lazy(u2 -> {
                 final Stream<Option<WatchEvent<Path>>> empty = Stream.nil();
                 log.info("Polling WatchService events...");
