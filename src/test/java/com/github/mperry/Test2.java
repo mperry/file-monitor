@@ -1,6 +1,7 @@
 package com.github.mperry;
 
-import com.github.mperry.rx.Watcher2;
+import com.github.mperry.watch.Rx;
+import com.github.mperry.watch.Util;
 import fj.P2;
 import org.junit.Test;
 import org.slf4j.Logger;
@@ -24,8 +25,6 @@ public class Test2 {
 
 	}
 
-
-
 	@Test
 	public void test1() {
 		Observable.from(1, 2, 3).subscribe(i -> println(i));
@@ -35,7 +34,7 @@ public class Test2 {
 	P2<WatchService, Observable<WatchEvent<Path>>> create() throws IOException {
 		File dir = new File(".");
 		println(String.format("monitoring dir: %s", dir.getAbsolutePath()));
-		return Watcher2.create(dir, Util.ALL_EVENTS);
+		return Rx.create(dir, Util.ALL_EVENTS);
 	}
 
 	@Test
@@ -70,8 +69,8 @@ public class Test2 {
 		File dir = new File(".");
 		println(String.format("monitoring dir: %s", dir.getAbsolutePath()));
 //		WatchService s = FileSystems.getDefault().newWatchService();
-		WatchService s = Watcher2.register(dir, Util.ALL_EVENTS);
-		Observable<WatchEvent<Path>> o = Watcher2.create2(s);
+		WatchService s = Rx.register(dir, Util.ALL_EVENTS);
+		Observable<WatchEvent<Path>> o = Rx.observable(s)._1();
 
 		println("subscribing...");
 		o.subscribe(we -> printWatchEvent(we), t -> println(t), () -> println("completed"));

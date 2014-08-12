@@ -13,14 +13,10 @@ import java.util.Arrays;
  */
 public class Test1 {
 
-
 	@Test
 	public void test1() {
-
-		Watcher.watch();
+//		Watcher.watch();
 	}
-
-
 
 	public static <A> A[] toArrayInit(final fj.data.List<A> list, A... args) {
 //		A[] array =  Arrays.copyOf(args, list.length());
