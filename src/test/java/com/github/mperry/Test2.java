@@ -3,6 +3,7 @@ package com.github.mperry;
 import com.github.mperry.watch.Rx;
 import com.github.mperry.watch.Util;
 import fj.P2;
+import fj.P3;
 import org.junit.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -32,7 +33,7 @@ public class Test2 {
 		Observable.from(1, 2, 3).subscribe(i -> println(i));
 	}
 
-	P2<WatchService, Observable<WatchEvent<Path>>> create() throws IOException {
+	P3<WatchService, WatchKey, Observable<WatchEvent<Path>>> create() throws IOException {
 		File dir = new File(".");
 		println(String.format("monitoring dir: %s", dir.getAbsolutePath()));
 		return Rx.create(dir, Util.ALL_EVENTS);
@@ -40,9 +41,9 @@ public class Test2 {
 
 //	@Test
 	public void test2() throws IOException {
-		P2<WatchService, Observable<WatchEvent<Path>>> p = create();
+		P3<WatchService, WatchKey, Observable<WatchEvent<Path>>> p = create();
 
-		p._2().take(5).forEach(we -> {
+		p._3().take(5).forEach(we -> {
 			println(String.format("Watch event, context: %s kind: %s", we.context(), we.kind()));
 		});
 		p._1().close();
@@ -55,15 +56,15 @@ public class Test2 {
 //	@Test
 	public void test3() {
 		try {
-			P2<WatchService, Observable<WatchEvent<Path>>> p = create();
+			P3<WatchService, WatchKey, Observable<WatchEvent<Path>>> p = create();
 			println("subscribing...");
-			Subscription s = p._2().subscribeOn(Schedulers.computation()).subscribe(we -> printWatchEvent(we), t -> {
+			Subscription s = p._3().subscribeOn(Schedulers.computation()).subscribe(we -> printWatchEvent(we), t -> {
 				log.info("Observable error...");
 				log.error(t.getMessage(), t);
 			}, () -> println("completed"));
 			println("subscribed");
 			// does not work
-			p._2().take(5).forEach(we -> printWatchEvent(we));
+			p._3().take(5).forEach(we -> printWatchEvent(we));
 			println("sleeping");
 			sleep(3000);
 			println("awake again");
@@ -83,8 +84,8 @@ public class Test2 {
 		File dir = new File(".");
 		println(String.format("monitoring dir: %s", dir.getAbsolutePath()));
 //		WatchService s = FileSystems.getDefault().newWatchService();
-		WatchService s = Rx.register(dir, Util.ALL_EVENTS);
-		Observable<WatchEvent<Path>> o = Rx.observable(s)._1();
+		P2<WatchService, WatchKey> s = Rx.register(dir, Util.ALL_EVENTS);
+		Observable<WatchEvent<Path>> o = Rx.observable(s._1())._1();
 
 		println("subscribing...");
 		o.subscribe(we -> printWatchEvent(we), t -> println(t), () -> println("completed"));
@@ -95,7 +96,7 @@ public class Test2 {
 		o.take(5).forEach(we -> printWatchEvent(we));
 		sleep(9000);
 
-		s.close();
+		s._1().close();
 	}
 
 }

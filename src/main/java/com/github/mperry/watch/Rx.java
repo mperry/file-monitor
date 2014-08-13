@@ -2,10 +2,7 @@ package com.github.mperry.watch;
 
 import com.sun.nio.file.SensitivityWatchEventModifier;
 import fj.*;
-import fj.data.Java;
-import fj.data.List;
-import fj.data.Option;
-import fj.data.Stream;
+import fj.data.*;
 import org.apache.commons.lang3.SystemUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -32,19 +29,20 @@ public class Rx {
     public static final File DEFAULT_DIR = new File(DEFAULT_PATH);
 	static final SensitivityWatchEventModifier SENSITIVITY = SensitivityWatchEventModifier.HIGH;
 
-    public static WatchService register(File dir, List<WatchEvent.Kind<Path>> list) throws IOException {
+    public static P2<WatchService, WatchKey> register(File dir, List<WatchEvent.Kind<Path>> list) throws IOException {
 		WatchService s = FileSystems.getDefault().newWatchService();
         // ignore k (below) for now
         WatchKey k = dir.toPath().register(s, list.toCollection().toArray(new WatchEvent.Kind[list.length()]), SENSITIVITY);
-		return s;
+		return P.p(s, k);
 	}
 
-	public static P2<WatchService, Observable<WatchEvent<Path>>> create(File dir, List<WatchEvent.Kind<Path>> list) throws IOException {
-		WatchService s = register(dir, list);
-		return P.p(s, create(s));
+	public static P3<WatchService, WatchKey, Observable<WatchEvent<Path>>> create(File dir, List<WatchEvent.Kind<Path>> list) throws IOException {
+		P2<WatchService, WatchKey> s = register(dir, list);
+		return P.p(s._1(), s._2(), create(s._1(), s._2()));
 	}
 
-	public static Observable<WatchEvent<Path>> create(final WatchService s) {
+	public static Observable<WatchEvent<Path>> create(final WatchService s, final WatchKey key) {
+
 		Observable.OnSubscribe<WatchEvent<Path>> os = sub -> {
 			try {
 				while (true) {
@@ -86,7 +84,76 @@ public class Rx {
         return P.lazy(u -> Observable.from(streamOpt(s)._1()));
     }
 
-    public static P1<Stream<WatchEvent<Path>>> stream(final WatchService s) {
+	/**
+	 * Process events on key
+	 * @param key
+	 */
+	public static Seq<WatchEvent<Path>> processEvents(WatchKey key) {
+		Seq<WatchEvent<Path>> result = Seq.<WatchEvent<Path>>empty();
+		for (WatchEvent<?> event : key.pollEvents()) {
+			WatchEvent<Path> we = (WatchEvent<Path>) event;
+			result = result.snoc(we);
+		}
+		boolean b = key.reset();
+		if (!b) {
+			log.info(String.format("Key %s is now invalid"), key);
+//					return result;
+		}
+		return result;
+	}
+
+	/**
+	 * Process the next key on the watch service
+	 * @param s
+	 * @param k Key for the watch service
+	 * @return Fail if the watch service key is invalid or interrupted otherwise success with the sequence of watch events.
+	 */
+	public static Validation<String, Seq<WatchEvent<Path>>> processNextKey(final WatchService s, final WatchKey k) {
+		if (!k.isValid()) {
+			return Validation.fail("WatchKey is invalid: " + k);
+		} else {
+			Validation<String, WatchKey> v = Validation.validation(takeV(s).toEither().left().map(e -> e.getMessage()));
+			return v.map(key -> processEvents(key));
+		}
+
+	}
+
+	public static IO<Validation<String, Seq<WatchEvent<Path>>>> processNextKeyIO(final WatchService s, final WatchKey k) {
+		return IOFunctions.unit(P.lazy(u -> processNextKey(s, k)));
+	}
+
+	public static IO<Seq<WatchEvent<Path>>> processNextKeySimpleIO(final WatchService s, final WatchKey k) {
+		return IOFunctions.map(processNextKeyIO(s, k), v -> v.isFail() ? Seq.<WatchEvent<Path>>empty() : v.success());
+	}
+
+	public static Stream<IO<Seq<WatchEvent<Path>>>> streamIo(final WatchService s, final WatchKey k) {
+		return Stream.repeat(processNextKeySimpleIO(s, k));
+	}
+
+
+
+	public <A> IO<Unit> runStreamIo(final WatchService s, final WatchKey k, F<Seq<WatchEvent<Path>>, A> f) {
+		return IOFunctions.unit(P.lazy(u -> {
+			Runnable r = () -> streamIo(s, k).foreach(io -> {
+				try {
+					Seq<WatchEvent<Path>> seq = io.run();
+					f.f(seq);
+				} catch (IOException e) {
+					log.error(e.getMessage(), e);
+				}
+				return null;
+			});
+			r.run();
+			return Unit.unit();
+		}));
+	}
+
+	public static Stream<Seq<WatchEvent<Path>>> stream(final WatchService s, final WatchKey k) throws IOException {
+		return IOFunctions.sequence(streamIo(s, k)).run();
+
+	}
+
+	public static P1<Stream<WatchEvent<Path>>> stream(final WatchService s) {
         return P.lazy(u -> {
             final Stream<WatchEvent<Path>> empty = Stream.nil();
             Util.printThread();
@@ -132,16 +199,20 @@ public class Rx {
     }
 
     static Option<WatchKey> take(WatchService s) {
-        try {
-            return Option.fromNull(s.take());
-        } catch (InterruptedException e) {
-            return Option.<WatchKey>none();
-        }
+		return takeV(s).toOption();
     }
 
+	static Validation<InterruptedException, WatchKey> takeV(WatchService s) {
+		try {
+			return Validation.success(s.take());
+		} catch (InterruptedException e) {
+			return Validation.fail(e);
+		}
+	}
+
     public static P2<WatchService, P1<Stream<WatchEvent<Path>>>> stream(File dir, List<WatchEvent.Kind<Path>> list) throws IOException {
-        WatchService s2 = register(dir, list);
-        return P.p(s2, stream(s2));
+        P2<WatchService, WatchKey> s2 = register(dir, list);
+        return P.p(s2._1(), stream(s2._1()));
     }
 
 	public static <A, B> Observable<B> flatMap(Observable<Option<A>> o, F<A, Observable<B>> f) {
