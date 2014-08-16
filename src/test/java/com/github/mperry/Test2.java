@@ -6,7 +6,6 @@ import fj.P2;
 import fj.P3;
 import org.junit.Test;
 import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 import rx.Observable;
 import rx.Subscription;
 import rx.schedulers.Schedulers;
@@ -36,7 +35,7 @@ public class Test2 {
 	P3<WatchService, WatchKey, Observable<WatchEvent<Path>>> create() throws IOException {
 		File dir = new File(".");
 		println(String.format("monitoring dir: %s", dir.getAbsolutePath()));
-		return Rx.create(dir, Util.ALL_EVENTS);
+		return Rx.createDirect(dir, Util.ALL_EVENTS);
 	}
 
 //	@Test
@@ -85,7 +84,7 @@ public class Test2 {
 		println(String.format("monitoring dir: %s", dir.getAbsolutePath()));
 //		WatchService s = FileSystems.getDefault().newWatchService();
 		P2<WatchService, WatchKey> s = Rx.register(dir, Util.ALL_EVENTS);
-		Observable<WatchEvent<Path>> o = Rx.observable(s._1())._1();
+		Observable<WatchEvent<Path>> o = Rx.observable(s._1(), s._2())._1();
 
 		println("subscribing...");
 		o.subscribe(we -> printWatchEvent(we), t -> println(t), () -> println("completed"));

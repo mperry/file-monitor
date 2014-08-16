@@ -5,16 +5,13 @@ import fj.*;
 import fj.data.*;
 import org.apache.commons.lang3.SystemUtils;
 import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 import rx.Observable;
 
 import java.io.File;
 import java.io.IOException;
 import java.nio.file.*;
 
-import static com.github.mperry.watch.Util.threadId;
 import static java.lang.String.format;
-import static java.nio.file.FileSystems.getDefault;
 //import java.util.List;
 
 /**
@@ -31,17 +28,16 @@ public class Rx {
 
     public static P2<WatchService, WatchKey> register(File dir, List<WatchEvent.Kind<Path>> list) throws IOException {
 		WatchService s = FileSystems.getDefault().newWatchService();
-        // ignore k (below) for now
         WatchKey k = dir.toPath().register(s, list.toCollection().toArray(new WatchEvent.Kind[list.length()]), SENSITIVITY);
 		return P.p(s, k);
 	}
 
-	public static P3<WatchService, WatchKey, Observable<WatchEvent<Path>>> create(File dir, List<WatchEvent.Kind<Path>> list) throws IOException {
+	public static P3<WatchService, WatchKey, Observable<WatchEvent<Path>>> createDirect(File dir, List<WatchEvent.Kind<Path>> list) throws IOException {
 		P2<WatchService, WatchKey> s = register(dir, list);
-		return P.p(s._1(), s._2(), create(s._1(), s._2()));
+		return P.p(s._1(), s._2(), createDirect(s._1(), s._2()));
 	}
 
-	public static Observable<WatchEvent<Path>> create(final WatchService s, final WatchKey key) {
+	public static Observable<WatchEvent<Path>> createDirect(final WatchService s, final WatchKey key) {
 
 		Observable.OnSubscribe<WatchEvent<Path>> os = sub -> {
 			try {
@@ -72,23 +68,23 @@ public class Rx {
 		return Observable.create(os);
 	}
 
-	public static P1<Observable<WatchEvent<Path>>> observable(final WatchService s) {
-		return P.lazy(u -> Observable.from(stream(s)._1()));
+	public static P1<Observable<WatchEvent<Path>>> observable(final WatchService s, WatchKey k) {
+		return P.lazy(u -> Observable.from(streamEvents(s, k)._1()));
 	}
 
-	public static P1<Observable<WatchEvent<Path>>> observable2(final WatchService s) {
-		return observableOpt(s).map(o -> mapFilter(o, Function.identity()));
+	public static P1<Observable<WatchEvent<Path>>> observable2(final WatchService s, WatchKey k) {
+		return observableOptions(s, k).map(o -> mapFilter(o, Function.identity()));
 	}
 
-    public static P1<Observable<Option<WatchEvent<Path>>>> observableOpt(final WatchService s) {
-        return P.lazy(u -> Observable.from(streamOpt(s)._1()));
+    public static P1<Observable<Option<WatchEvent<Path>>>> observableOptions(final WatchService s, WatchKey k) {
+        return P.lazy(u -> Observable.from(streamOptionEvent(s, k)._1()));
     }
 
 	/**
 	 * Process events on key
 	 * @param key
 	 */
-	public static Seq<WatchEvent<Path>> processEvents(WatchKey key) {
+	public static Seq<WatchEvent<Path>> processEventSeq(WatchKey key) {
 		Seq<WatchEvent<Path>> result = Seq.<WatchEvent<Path>>empty();
 		for (WatchEvent<?> event : key.pollEvents()) {
 			WatchEvent<Path> we = (WatchEvent<Path>) event;
@@ -97,9 +93,21 @@ public class Rx {
 		boolean b = key.reset();
 		if (!b) {
 			log.info(String.format("Key %s is now invalid"), key);
-//					return result;
 		}
 		return result;
+	}
+
+	public static List<WatchEvent<Path>> processEventList(WatchKey key) {
+		List<WatchEvent<Path>> result = List.<WatchEvent<Path>>nil();
+		for (WatchEvent<?> event : key.pollEvents()) {
+			WatchEvent<Path> we = (WatchEvent<Path>) event;
+			result = result.cons(we);
+		}
+		boolean b = key.reset();
+		if (!b) {
+			log.info(String.format("Key %s is now invalid"), key);
+		}
+		return result.reverse();
 	}
 
 	/**
@@ -112,10 +120,9 @@ public class Rx {
 		if (!k.isValid()) {
 			return Validation.fail("WatchKey is invalid: " + k);
 		} else {
-			Validation<String, WatchKey> v = Validation.validation(takeV(s).toEither().left().map(e -> e.getMessage()));
-			return v.map(key -> processEvents(key));
+			Validation<String, WatchKey> v = Validation.validation(takeValidation(s).toEither().left().map(e -> e.getMessage()));
+			return v.map(key -> processEventSeq(key));
 		}
-
 	}
 
 	public static IO<Validation<String, Seq<WatchEvent<Path>>>> processNextKeyIO(final WatchService s, final WatchKey k) {
@@ -129,8 +136,6 @@ public class Rx {
 	public static Stream<IO<Seq<WatchEvent<Path>>>> streamIo(final WatchService s, final WatchKey k) {
 		return Stream.repeat(processNextKeySimpleIO(s, k));
 	}
-
-
 
 	public <A> IO<Unit> runStreamIo(final WatchService s, final WatchKey k, F<Seq<WatchEvent<Path>>, A> f) {
 		return IOFunctions.unit(P.lazy(u -> {
@@ -153,56 +158,37 @@ public class Rx {
 
 	}
 
-	public static P1<Stream<WatchEvent<Path>>> stream(final WatchService s) {
+	public static P1<Stream<WatchEvent<Path>>> streamEvents(final WatchService s, WatchKey k) {
         return P.lazy(u -> {
             final Stream<WatchEvent<Path>> empty = Stream.nil();
-            Util.printThread();
-            Option<WatchKey> optKey = take(s);
-            return optKey.map(key -> {
-                Stream<WatchEvent<Path>> result = empty;
-                for (WatchEvent<?> event : key.pollEvents()) {
-                    WatchEvent<Path> we = (WatchEvent<Path>) event;
-                    result = result.snoc(we);
-                }
-                boolean b = key.reset();
-                if (!b) {
-                    log.error(String.format("Key %s is invalid"), key);
-                    return result;
-                }
-                return result.append(stream(s));
+            return takeOption(s).map(key -> {
+				Stream<WatchEvent<Path>> result = empty;
+				for (WatchEvent<Path> we: processEventList(key)) {
+					result = result.cons(we);
+				}
+                return result.reverse().append(streamEvents(s, k));
             }).orSome(empty);
         });
     }
 
-    public static P1<Stream<Option<WatchEvent<Path>>>> streamOpt(final WatchService s) {
-        return P.lazy(u -> {
-            return Stream.cons(Option.<WatchEvent<Path>>none(), P.lazy(u2 -> {
-                final Stream<Option<WatchEvent<Path>>> empty = Stream.nil();
-//                log.info(format("Polling WatchService events on %s...", threadId()));
-                Option<WatchKey> optKey = take(s);
-//                log.info("Finished polling.");
-                return optKey.map(key -> {
-                    Stream<Option<WatchEvent<Path>>> result = empty;
-                    for (WatchEvent<?> event : key.pollEvents()) {
-                        WatchEvent<Path> we = (WatchEvent<Path>) event;
-                        result = result.snoc(Option.some(we));
-                    }
-                    boolean b = key.reset();
-                    if (!b) {
-                        log.error(String.format("Key %s is invalid"), key);
-                        return result;
-                    }
-                    return result.append(streamOpt(s));
-                }).orSome(empty);
-            }));
-        });
+    public static P1<Stream<Option<WatchEvent<Path>>>> streamOptionEvent(final WatchService s, WatchKey k) {
+		final Stream<Option<WatchEvent<Path>>> empty = Stream.nil();
+        return P.lazy(u -> Stream.cons(Option.<WatchEvent<Path>>none(), P.lazy(u2 -> {
+			return takeOption(s).map(key -> {
+				Stream<Option<WatchEvent<Path>>> result = empty;
+				for (WatchEvent<Path> we : processEventList(key)) {
+					result = result.cons(Option.some(we));
+				}
+				return result.reverse().append(streamOptionEvent(s, k));
+			}).orSome(empty);
+		})));
     }
 
-    static Option<WatchKey> take(WatchService s) {
-		return takeV(s).toOption();
+    static Option<WatchKey> takeOption(WatchService s) {
+		return takeValidation(s).toOption();
     }
 
-	static Validation<InterruptedException, WatchKey> takeV(WatchService s) {
+	static Validation<InterruptedException, WatchKey> takeValidation(WatchService s) {
 		try {
 			return Validation.success(s.take());
 		} catch (InterruptedException e) {
@@ -210,9 +196,9 @@ public class Rx {
 		}
 	}
 
-    public static P2<WatchService, P1<Stream<WatchEvent<Path>>>> stream(File dir, List<WatchEvent.Kind<Path>> list) throws IOException {
-        P2<WatchService, WatchKey> s2 = register(dir, list);
-        return P.p(s2._1(), stream(s2._1()));
+    public static P3<WatchService, WatchKey, P1<Stream<WatchEvent<Path>>>> streamEvents(File dir, List<WatchEvent.Kind<Path>> list) throws IOException {
+        P2<WatchService, WatchKey> p = register(dir, list);
+        return P.p(p._1(), p._2(), streamEvents(p._1(), p._2()));
     }
 
 	public static <A, B> Observable<B> flatMap(Observable<Option<A>> o, F<A, Observable<B>> f) {
@@ -228,7 +214,6 @@ public class Rx {
 	}
 
 	public static <A, B> Observable<B> mapFilter(Observable<Option<A>> o, F<A, B> f) {
-
 		return mapFilter(o, oa -> oa.isSome(), oa -> f.f(oa.some()));
 	}
 

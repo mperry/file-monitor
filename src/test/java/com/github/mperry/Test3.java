@@ -3,6 +3,7 @@ package com.github.mperry;
 import com.github.mperry.watch.Rx;
 import com.github.mperry.watch.Util;
 import fj.P1;
+import fj.P2;
 import fj.data.Option;
 import fj.data.Stream;
 import org.junit.Test;
@@ -14,8 +15,8 @@ import rx.schedulers.Schedulers;
 import java.io.IOException;
 import java.nio.file.Path;
 import java.nio.file.WatchEvent;
-
-import static com.github.mperry.watch.Util.printThread;
+import java.nio.file.WatchKey;
+import java.nio.file.WatchService;
 
 
 /**
@@ -63,7 +64,8 @@ public class Test3 {
     public void test2() {
         try {
             log.info("create observable...");
-            P1<Observable<WatchEvent<Path>>> o1 = Rx.observable2(Rx.register(Rx.DEFAULT_DIR, Util.ALL_EVENTS)._1());
+			P2<WatchService, WatchKey> p = Rx.register(Rx.DEFAULT_DIR, Util.ALL_EVENTS);
+			P1<Observable<WatchEvent<Path>>> o1 = Rx.observable2(p._1(), p._2());
             log.info("set subscribe on...");
             Observable<WatchEvent<Path>> o2  = o1._1().subscribeOn(Schedulers.io());
             log.info("subscribing...");
@@ -94,7 +96,8 @@ public class Test3 {
 //            log.info("Running test on thread id: " + Util.threadId());
 //            printThread();
             log.info("create observable...");
-            P1<Observable<Option<WatchEvent<Path>>>> o1 = Rx.observableOpt(Rx.register(Rx.DEFAULT_DIR, Util.ALL_EVENTS)._1());
+			P2<WatchService, WatchKey> p = Rx.register(Rx.DEFAULT_DIR, Util.ALL_EVENTS);
+			P1<Observable<Option<WatchEvent<Path>>>> o1 = Rx.observableOptions(p._1(), p._2());
             log.info("set subscribe on...");
             Observable<Option<WatchEvent<Path>>> o2  = o1._1().subscribeOn(Schedulers.io());
             log.info("subscribing...");
