@@ -68,11 +68,11 @@ public class Rx {
 		return Observable.create(os);
 	}
 
-	public static P1<Observable<WatchEvent<Path>>> observable(final WatchService s, WatchKey k) {
+	public static P1<Observable<WatchEvent<Path>>> observableActive(final WatchService s, WatchKey k) {
 		return P.lazy(u -> Observable.from(streamEvents(s, k)._1()));
 	}
 
-	public static P1<Observable<WatchEvent<Path>>> observable2(final WatchService s, WatchKey k) {
+	public static P1<Observable<WatchEvent<Path>>> observableInactive(final WatchService s, WatchKey k) {
 		return observableOptions(s, k).map(o -> mapFilter(o, Function.identity()));
 	}
 

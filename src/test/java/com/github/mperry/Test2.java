@@ -84,7 +84,7 @@ public class Test2 {
 		println(String.format("monitoring dir: %s", dir.getAbsolutePath()));
 //		WatchService s = FileSystems.getDefault().newWatchService();
 		P2<WatchService, WatchKey> s = Rx.register(dir, Util.ALL_EVENTS);
-		Observable<WatchEvent<Path>> o = Rx.observable(s._1(), s._2())._1();
+		Observable<WatchEvent<Path>> o = Rx.observableActive(s._1(), s._2())._1();
 
 		println("subscribing...");
 		o.subscribe(we -> printWatchEvent(we), t -> println(t), () -> println("completed"));
