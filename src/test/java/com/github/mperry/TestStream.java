@@ -1,16 +1,13 @@
 package com.github.mperry;
 
-import com.github.mperry.watch.Rx;
+import com.github.mperry.watch.FileMonitor;
 import com.github.mperry.watch.Util;
 import fj.P1;
 import fj.P2;
-import fj.Show;
-import fj.data.Option;
 import fj.data.Stream;
 import org.junit.Test;
 import org.slf4j.Logger;
 
-import java.io.File;
 import java.io.IOException;
 import java.nio.file.Path;
 import java.nio.file.WatchEvent;
@@ -30,8 +27,8 @@ public class TestStream {
     public void testStream() {
 
         try {
-            P2<WatchService, WatchKey> p = Rx.register(Util.EVENT_DIR, Util.ALL_EVENTS);
-            P1<Stream<WatchEvent<Path>>> streamP1 = Rx.streamEvents(p._1(), p._2());
+            P2<WatchService, WatchKey> p = FileMonitor.register(Util.EVENT_DIR, FileMonitor.ALL_EVENTS);
+            P1<Stream<WatchEvent<Path>>> streamP1 = FileMonitor.streamEvents(p._1(), p._2());
             log.info("generating events...");
             Util.generateEventsAsync(100, some(500));
             log.info("getting stream...");
@@ -46,8 +43,8 @@ public class TestStream {
     @Test
     public void testIterable() {
         try {
-            P2<WatchService, WatchKey> p = Rx.register(Util.EVENT_DIR, Util.ALL_EVENTS);
-            P1<Stream<WatchEvent<Path>>> streamP1 = Rx.streamEvents(p._1(), p._2());
+            P2<WatchService, WatchKey> p = FileMonitor.register(Util.EVENT_DIR, FileMonitor.ALL_EVENTS);
+            P1<Stream<WatchEvent<Path>>> streamP1 = FileMonitor.streamEvents(p._1(), p._2());
             log.info("generating events...");
             Util.generateEventsAsync(100, some(500));
             log.info("getting stream...");

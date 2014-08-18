@@ -1,7 +1,59 @@
 
 apply plugin: 'java'
+apply plugin: 'maven'
 
 defaultTasks "build"
+
+
+ext {
+}
+
+ext {
+
+    isSnapshot = true
+    baseVersion = "0.1"
+    snap = "-SNAPSHOT"
+
+}
+
+
+
+ext {
+
+    sonatypeBaseUrl = "https://oss.sonatype.org"
+    sonatypeSnapshotUrl = "$sonatypeBaseUrl/content/repositories/snapshots/"
+    sonatypeRepositoryUrl = "$sonatypeBaseUrl/content/groups/public"
+    sonatypeReleaseUrl = "$sonatypeBaseUrl/service/local/staging/deploy/maven2/"
+    sonatypeUploadUrl = isSnapshot ? sonatypeSnapshotUrl : sonatypeReleaseUrl
+
+    projectUrl = "https://github.com/mperry/file-monitor"
+    projectName = "FileMonitor"
+    pomProjectName = "FileMonitor"
+    baseJarName = "file-monitor"
+
+    groupName = "com.github.mperry"
+    scmGitFile = "scm:git@github.com:mperry/file-monitor.git"
+    projectDescription = "Creates file systems events as stream or observable watch events"
+
+    founder = "Mark Perry"
+    founderUsername = "mperry"
+    organisation = groupName
+//    groovyVersion = "2.3.4"
+//    fjVersion = "4.2$snap"
+
+//    gradleGroovy = "org.codehaus.groovy:groovy-all:$groovyVersion"
+//    gradleFj = "org.functionaljava:functionaljava:$fjVersion"
+//    gradleJunit = "junit:junit:4.10"
+
+}
+ext {
+
+
+}
+
+group = groupName
+archivesBaseName = baseJarName
+version = (baseVersion + (isSnapshot ? snap : "")).toString()
 
 repositories {
 	jcenter()
@@ -24,4 +76,57 @@ dependencies {
     testCompile 'junit:junit:4.11'
 
 }
+
+Boolean doSigning() {
+    signingEnabled.trim() == "true"
+}
+
+
+//uploadArchives.enabled = false
+uploadArchives {
+    repositories {
+        mavenDeployer {
+            if (doSigning()) {
+                beforeDeployment { MavenDeployment deployment -> signing.signPom(deployment) }
+            }
+
+            repository(url: sonatypeUploadUrl) {
+                authentication(userName: sonatypeUsername, password: sonatypePassword)
+            }
+            pom {
+                groupId = project.groupName
+                project {
+                    name pomProjectName
+                    packaging 'jar'
+                    description projectDescription
+                    url projectUrl
+
+                    scm {
+                        url "${projectUrl}.git"
+                        connection scmGitFile
+                        developerConnection scmGitFile
+                    }
+
+                    licenses {
+                        license {
+                            name 'The Apache Software License, Version 2.0'
+                            url 'http://www.apache.org/licenses/LICENSE-2.0.txt'
+                            distribution 'repo'
+                        }
+                    }
+
+                    developers {
+                        developer {
+                            id project.founderUsername
+                            name project.founder
+                        }
+                    }
+                }
+
+            }
+
+        }
+    }
+}
+
 

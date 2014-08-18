@@ -12,14 +12,18 @@ import java.io.IOException;
 import java.nio.file.*;
 
 import static java.lang.String.format;
+import static java.nio.file.StandardWatchEventKinds.ENTRY_CREATE;
+import static java.nio.file.StandardWatchEventKinds.ENTRY_DELETE;
+import static java.nio.file.StandardWatchEventKinds.ENTRY_MODIFY;
 //import java.util.List;
 
 /**
  * Created by MarkPerry on 11/08/2014.
  */
-public class Rx {
+public class FileMonitor {
 
-	static final Logger log = Util.logger(Rx.class);
+    public static final List<WatchEvent.Kind<Path>> ALL_EVENTS = List.list(ENTRY_CREATE, ENTRY_DELETE, ENTRY_MODIFY);
+    static final Logger log = Util.logger(FileMonitor.class);
 
     public static final String DEFAULT_PATH = SystemUtils.IS_OS_UNIX ? "/Users/mperry/repositories/file-monitor" : "D:/repositories/file-monitor";
 

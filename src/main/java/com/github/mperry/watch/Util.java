@@ -29,8 +29,6 @@ public class Util {
 
     public static final Logger log = logger(Util.class);
 
-	public static final List<WatchEvent.Kind<Path>> ALL_EVENTS = List.list(ENTRY_CREATE, ENTRY_DELETE, ENTRY_MODIFY);
-
     public static <K, V> Map<K, V> create(P2<K, V>... args) {
         Map<K, V> map = new HashMap<>();
         for (P2<K, V> p: args) {

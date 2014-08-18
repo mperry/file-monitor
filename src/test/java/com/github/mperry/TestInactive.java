@@ -1,6 +1,6 @@
 package com.github.mperry;
 
-import com.github.mperry.watch.Rx;
+import com.github.mperry.watch.FileMonitor;
 import com.github.mperry.watch.Util;
 import fj.*;
 import fj.data.Option;
@@ -11,7 +11,6 @@ import rx.Observable;
 import rx.Subscription;
 import rx.schedulers.Schedulers;
 
-import java.io.File;
 import java.io.IOException;
 import java.nio.file.Path;
 import java.nio.file.WatchEvent;
@@ -72,9 +71,9 @@ public class TestInactive {
     @Test
     public void testObservableInactive() {
         try {
-            log.info("createActive observable...");
-			P2<WatchService, WatchKey> p = Rx.register(Rx.DEFAULT_DIR, Util.ALL_EVENTS);
-			P1<Observable<WatchEvent<Path>>> o1 = Rx.observableInactive(p._1(), p._2());
+            log.info("createDirect observable...");
+			P2<WatchService, WatchKey> p = FileMonitor.register(FileMonitor.DEFAULT_DIR, FileMonitor.ALL_EVENTS);
+			P1<Observable<WatchEvent<Path>>> o1 = FileMonitor.observableInactive(p._1(), p._2());
             runObservable(o1._1(), Util.printWatchEvent());
         } catch (IOException e) {
 			log.error(e.getMessage(), e);
@@ -84,9 +83,9 @@ public class TestInactive {
     @Test
     public void testObservableOptions() {
         try {
-            log.info("createActive observable...");
-			P2<WatchService, WatchKey> p = Rx.register(Rx.DEFAULT_DIR, Util.ALL_EVENTS);
-			P1<Observable<Option<WatchEvent<Path>>>> o1 = Rx.observableOptions(p._1(), p._2());
+            log.info("createDirect observable...");
+			P2<WatchService, WatchKey> p = FileMonitor.register(FileMonitor.DEFAULT_DIR, FileMonitor.ALL_EVENTS);
+			P1<Observable<Option<WatchEvent<Path>>>> o1 = FileMonitor.observableOptions(p._1(), p._2());
             runObservable(o1._1(), Util.printOptionWatchEvent());
         } catch (IOException e) {
 			log.error(e.getMessage(), e);
@@ -97,8 +96,8 @@ public class TestInactive {
 //    @Test
     public void testFullSubscribe() {
         try {
-            P2<WatchService, WatchKey> p2 = Rx.register(Util.EVENT_DIR, Util.ALL_EVENTS);
-            Observable<WatchEvent<Path>> obs = Rx.observableInactive(p2._1(), p2._2())._1();
+            P2<WatchService, WatchKey> p2 = FileMonitor.register(Util.EVENT_DIR, FileMonitor.ALL_EVENTS);
+            Observable<WatchEvent<Path>> obs = FileMonitor.observableInactive(p2._1(), p2._2())._1();
             println("subscribing...");
             Observable<WatchEvent<Path>> obs2 = obs.subscribeOn(Schedulers.io());
             Subscription s =  obs2.subscribe(we -> Util.printWatchEvent(we), t -> {

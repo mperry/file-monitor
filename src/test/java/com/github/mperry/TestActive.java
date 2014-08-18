@@ -1,6 +1,6 @@
 package com.github.mperry;
 
-import com.github.mperry.watch.Rx;
+import com.github.mperry.watch.FileMonitor;
 import com.github.mperry.watch.Util;
 import fj.F;
 import fj.P2;
@@ -9,7 +9,6 @@ import fj.Unit;
 import org.junit.Test;
 import org.slf4j.Logger;
 import rx.Observable;
-import rx.Subscription;
 import rx.schedulers.Schedulers;
 
 import java.io.File;
@@ -35,10 +34,10 @@ public class TestActive {
 
 
 
-	P3<WatchService, WatchKey, Observable<WatchEvent<Path>>> createActive() throws IOException {
+	P3<WatchService, WatchKey, Observable<WatchEvent<Path>>> createDirect() throws IOException {
 		File dir = Util.EVENT_DIR;
 		println(format("monitoring dir: %s", dir.getAbsolutePath()));
-		return Rx.createDirect(dir, Util.ALL_EVENTS);
+		return FileMonitor.createDirect(dir, FileMonitor.ALL_EVENTS);
 	}
 
 
@@ -46,7 +45,7 @@ public class TestActive {
         Runnable r = () -> {
             try {
                 Util.printThread();
-                f.f(createActive()._3());
+                f.f(createDirect()._3());
                 log.info("called func");
 
             } catch (IOException e) {
@@ -86,9 +85,9 @@ public class TestActive {
 		File dir = Util.EVENT_DIR;
 		println(format("monitoring dir: %s", dir.getAbsolutePath()));
 //		WatchService s = FileSystems.getDefault().newWatchService();
-		P2<WatchService, WatchKey> s = Rx.register(dir, Util.ALL_EVENTS);
+		P2<WatchService, WatchKey> s = FileMonitor.register(dir, FileMonitor.ALL_EVENTS);
         generateEventsAsync(100, some(500));
-		Observable<WatchEvent<Path>> o = Rx.observableActive(s._1(), s._2())._1();
+		Observable<WatchEvent<Path>> o = FileMonitor.observableActive(s._1(), s._2())._1();
 		println("subscribing...");
 		o.subscribeOn(Schedulers.io()).subscribe(we -> printWatchEvent(we), t -> println(t), () -> println("completed"));
 		println("subscribed");
