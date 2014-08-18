@@ -54,10 +54,10 @@ public class Util {
 
     public static void generateEventsAsync(int n, Option<Integer> option) {
         Runnable r = () -> {
-            option.forEach(i -> sleep(i));
-            generateEvents(n);
+//            option.forEach(i -> sleep(i));
+            generateEvents(n, option);
         };
-        r.run();
+        new Thread(r).start();
     }
 
     public static void sleep(int n) {
@@ -80,10 +80,13 @@ public class Util {
         generateEvents(n, none());
     }
 
+    public static final String EVENT_DIR_PATH = "etc/events";
+    public static final File EVENT_DIR = new File(EVENT_DIR_PATH);
+    public static final File EVENT_FILE = new File(EVENT_DIR_PATH, "event.log");
 
     public static void createEvent() {
         try {
-            append(new File("event.log"), "event\n");
+            append(EVENT_FILE, "event\n");
         } catch (IOException e) {
             log.error(e.getMessage(), e);
         }

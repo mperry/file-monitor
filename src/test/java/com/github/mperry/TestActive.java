@@ -17,6 +17,7 @@ import java.io.IOException;
 import java.nio.file.*;
 
 import static com.github.mperry.watch.Util.generateEvents;
+import static com.github.mperry.watch.Util.generateEventsAsync;
 import static fj.data.Option.some;
 import static java.lang.String.format;
 import static java.lang.Thread.sleep;
@@ -35,7 +36,7 @@ public class TestActive {
 
 
 	P3<WatchService, WatchKey, Observable<WatchEvent<Path>>> createActive() throws IOException {
-		File dir = new File(".");
+		File dir = Util.EVENT_DIR;
 		println(format("monitoring dir: %s", dir.getAbsolutePath()));
 		return Rx.createDirect(dir, Util.ALL_EVENTS);
 	}
@@ -78,49 +79,22 @@ public class TestActive {
 		println(format("Watch event, kind: %s, context: %s", we.kind(), we.context()));
 	}
 
-//	@Test
-	public void test3() {
-		try {
-			P3<WatchService, WatchKey, Observable<WatchEvent<Path>>> p = createActive();
-			println("subscribing...");
-			Subscription s = p._3().subscribeOn(Schedulers.computation()).subscribe(we -> printWatchEvent(we), t -> {
-				log.info("Observable error...");
-				log.error(t.getMessage(), t);
-			}, () -> println("completed"));
-			println("subscribed");
-			// does not work
-			p._3().take(5).forEach(we -> printWatchEvent(we));
-			println("sleeping");
-			sleep(3000);
-			println("awake again");
-			s.unsubscribe();
-			println("unsubscribed");
-			p._1().close();
-		} catch (InterruptedException e) {
-			log.error(e.getMessage(), e);
-		} catch (IOException e) {
-			log.error(e.getMessage(), e);
-		}
 
-	}
-
+    // WARNING: Direct subscribe does not work for full subscribe on another thread
 //	@Test
 	public void test4() throws IOException, InterruptedException {
-		File dir = new File(".");
+		File dir = Util.EVENT_DIR;
 		println(format("monitoring dir: %s", dir.getAbsolutePath()));
 //		WatchService s = FileSystems.getDefault().newWatchService();
 		P2<WatchService, WatchKey> s = Rx.register(dir, Util.ALL_EVENTS);
+        generateEventsAsync(100, some(500));
 		Observable<WatchEvent<Path>> o = Rx.observableActive(s._1(), s._2())._1();
-
 		println("subscribing...");
-		o.subscribe(we -> printWatchEvent(we), t -> println(t), () -> println("completed"));
+		o.subscribeOn(Schedulers.io()).subscribe(we -> printWatchEvent(we), t -> println(t), () -> println("completed"));
 		println("subscribed");
-
-
 		// does not work
 		o.take(5).forEach(we -> printWatchEvent(we));
-		sleep(9000);
-
+		sleep(2000);
 		s._1().close();
 	}
 
