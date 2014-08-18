@@ -6,11 +6,14 @@ import fj.Unit;
 import fj.data.List;
 import fj.data.Option;
 import org.apache.commons.io.FileUtils;
+import org.apache.commons.io.IOUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.io.File;
 import java.io.IOException;
+import java.io.OutputStream;
+import java.nio.charset.Charset;
 import java.nio.file.Path;
 import java.nio.file.WatchEvent;
 import java.util.HashMap;
@@ -25,6 +28,7 @@ import static java.nio.file.StandardWatchEventKinds.ENTRY_MODIFY;
 /**
  * Created by MarkPerry on 11/08/2014.
  */
+
 public class Util {
 
     public static final Logger log = logger(Util.class);
@@ -49,11 +53,10 @@ public class Util {
         return Thread.currentThread().getId();
     }
 
-
     public static void generateEventsAsync(int n, Option<Integer> option) {
         Runnable r = () -> {
 //            option.forEach(i -> sleep(i));
-            generateEvents(n, option);
+            generateEvents(n, EVENT_FILE, option);
         };
         new Thread(r).start();
     }
@@ -67,15 +70,15 @@ public class Util {
     }
 
 
-    public static void generateEvents(int n, Option<Integer> optionSleep) {
+    public static void generateEvents(int n, File f, Option<Integer> optionSleep) {
         for (int i = 0; i < n; i++) {
             optionSleep.forEach(t -> sleep(t));
-            createEvent();
+            createEvent(f);
         }
     }
 
     public static void generateEvents(int n) {
-        generateEvents(n, none());
+        generateEvents(n, EVENT_FILE, none());
     }
 
     public static final String EVENT_DIR_PATH = "etc/events";
@@ -83,17 +86,21 @@ public class Util {
     public static final File EVENT_FILE = new File(EVENT_DIR_PATH, "event.log");
 
     public static void createEvent() {
-        try {
-            append(EVENT_FILE, "event\n");
-        } catch (IOException e) {
-            log.error(e.getMessage(), e);
-        }
+		createEvent(EVENT_FILE);
     }
 
-    public static void append(File f, String text) throws IOException {
-        FileUtils.writeStringToFile(f, text, true);
-    }
+	public static void createEvent(File f) {
+		try {
+			append(f, "event\n");
+		} catch (IOException e) {
+			log.error(e.getMessage(), e);
+		}
+	}
 
+
+	public static void append(File f, String text) throws IOException {
+        CommonsIO.writeStringToFile(f, text, true);
+    }
 
     public static F<WatchEvent<Path>, Unit> printWatchEvent() {
         return we -> {
@@ -110,7 +117,11 @@ public class Util {
     }
 
     public static void printWatchEvent(WatchEvent<Path> we) {
-        log.info(String.format("thread: %d, kind: %s, context: %s", Util.threadId(), we.kind(), we.context()));
+        try {
+            log.info(String.format("thread: %d, kind: %s, contextPath: %s", Util.threadId(), we.kind(), we.context().toFile().getCanonicalPath()));
+        } catch (IOException e) {
+            log.error(e.getMessage(), e);
+        }
     }
 
     public static void printOWE(Option<WatchEvent<Path>> option) {

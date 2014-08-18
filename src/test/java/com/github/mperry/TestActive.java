@@ -70,7 +70,7 @@ public class TestActive {
             return Unit.unit();
         });
         Util.sleep(1000);
-        generateEvents(10, some(500));
+        generateEvents(10, Util.EVENT_FILE, some(500));
         Util.sleep(1000);
 	}
 
