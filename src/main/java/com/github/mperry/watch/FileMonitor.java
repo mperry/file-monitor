@@ -30,13 +30,16 @@ public class FileMonitor {
     public static final File DEFAULT_DIR = new File(DEFAULT_PATH);
 	static final SensitivityWatchEventModifier SENSITIVITY = SensitivityWatchEventModifier.HIGH;
 
-    public static P2<WatchService, WatchKey> register(File dir, List<WatchEvent.Kind<Path>> list) throws IOException {
-		WatchService s = FileSystems.getDefault().newWatchService();
-        WatchKey k = dir.toPath().register(s, list.toCollection().toArray(new WatchEvent.Kind[list.length()]), SENSITIVITY);
-		return P.p(s, k);
+    public static P2<WatchService, WatchKey> register(File dir, List<WatchEvent.Kind<Path>> list, WatchService ws) throws IOException {
+        WatchKey k = dir.toPath().register(ws, list.toCollection().toArray(new WatchEvent.Kind[list.length()]), SENSITIVITY);
+		return P.p(ws, k);
 	}
 
-	public static P3<WatchService, WatchKey, Observable<WatchEvent<Path>>> createDirect(File dir, List<WatchEvent.Kind<Path>> list) throws IOException {
+    public static P2<WatchService, WatchKey> register(File dir, List<WatchEvent.Kind<Path>> list) throws IOException {
+        return register(dir, list, FileSystems.getDefault().newWatchService());
+    }
+
+    public static P3<WatchService, WatchKey, Observable<WatchEvent<Path>>> createDirect(File dir, List<WatchEvent.Kind<Path>> list) throws IOException {
 		P2<WatchService, WatchKey> s = register(dir, list);
 		return P.p(s._1(), s._2(), createDirect(s._1(), s._2()));
 	}
