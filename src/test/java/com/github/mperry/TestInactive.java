@@ -8,32 +8,35 @@ import fj.P2;
 import fj.Unit;
 import fj.data.Option;
 import fj.data.Stream;
-import org.apache.commons.io.FileUtils;
 import org.junit.Test;
 import org.slf4j.Logger;
 import rx.Observable;
 import rx.Subscription;
 import rx.schedulers.Schedulers;
 
-import java.io.File;
 import java.io.IOException;
 import java.nio.file.Path;
 import java.nio.file.WatchEvent;
 import java.nio.file.WatchKey;
 import java.nio.file.WatchService;
 
-import static fj.Unit.unit;
+import static com.github.mperry.watch.Util.sleep;
 
 
 /**
  * Created by mperry on 12/08/2014.
  */
-public class Test3 {
+public class TestInactive {
 
-    static final Logger log = Util.logger(Test3.class);
+    static final Logger log = Util.logger(TestInactive.class);
 
     void println(Object o) {
 		log.info(o.toString());
+    }
+
+    @Test
+    public void testSimpleSubscribe() {
+        Observable.from(1, 2, 3).subscribe(i -> println(i));
     }
 
     @Test
@@ -51,13 +54,6 @@ public class Test3 {
         println("done");
     }
 
-    public void sleep(int n) {
-        try {
-            Thread.sleep(n);
-        } catch (InterruptedException e) {
-            log.error(e.getMessage(), e);
-        }
-    }
 
     public <A> void runObservable(Observable<A> obs, F<A, Unit> print) {
         log.info("set subscribe on...");
@@ -77,10 +73,10 @@ public class Test3 {
     @Test
     public void testObservableInactive() {
         try {
-            log.info("create observable...");
+            log.info("createActive observable...");
 			P2<WatchService, WatchKey> p = Rx.register(Rx.DEFAULT_DIR, Util.ALL_EVENTS);
 			P1<Observable<WatchEvent<Path>>> o1 = Rx.observableInactive(p._1(), p._2());
-            runObservable(o1._1(), printWatchEvent());
+            runObservable(o1._1(), Util.printWatchEvent());
         } catch (IOException e) {
 			log.error(e.getMessage(), e);
         }
@@ -89,72 +85,19 @@ public class Test3 {
     @Test
     public void testObservableOptions() {
         try {
-            log.info("create observable...");
+            log.info("createActive observable...");
 			P2<WatchService, WatchKey> p = Rx.register(Rx.DEFAULT_DIR, Util.ALL_EVENTS);
 			P1<Observable<Option<WatchEvent<Path>>>> o1 = Rx.observableOptions(p._1(), p._2());
-            runObservable(o1._1(), printOptionWatchEvent());
+            runObservable(o1._1(), Util.printOptionWatchEvent());
         } catch (IOException e) {
 			log.error(e.getMessage(), e);
         }
     }
 
-    F<WatchEvent<Path>, Unit> printWatchEvent() {
-        return we -> {
-            printWatchEvent(we);
-            return unit();
-        };
-    }
-
-    F<Option<WatchEvent<Path>>, Unit> printOptionWatchEvent() {
-        return o -> {
-            printOWE(o);
-            return unit();
-        };
-    }
-
-    void printWatchEvent(WatchEvent<Path> we) {
-        println(String.format("thread: %d, kind: %s, context: %s", Util.threadId(), we.kind(), we.context()));
-    }
-
-	void printOWE(Option<WatchEvent<Path>> option) {
-		if (option.isNone()) {
-			println("Option is none");
-		}
-		option.map(we -> {
-            printWatchEvent(we);
-            return we;
-		});
-	}
 
 	@Test
 	public void testGenerateEvents() {
-		generateEvents(3);
+		Util.generateEvents(3);
 	}
-
-	void generateEventsAsync(int n) {
-		Runnable r = () -> {
-			generateEvents(n);
-		};
-		r.run();
-	}
-
-	void generateEvents(int n) {
-		for (int i = 0; i < n; i++) {
-			createEvent();
-		}
-	}
-
-	void createEvent() {
-		try {
-			append(new File("event.log"), "event\n");
-		} catch (IOException e) {
-			log.error(e.getMessage(), e);
-		}
-	}
-
-	void append(File f, String text) throws IOException {
-		FileUtils.writeStringToFile(f, text, true);
-	}
-
 
 }

@@ -2,8 +2,10 @@ package com.github.mperry;
 
 import com.github.mperry.watch.Rx;
 import com.github.mperry.watch.Util;
+import fj.F;
 import fj.P2;
 import fj.P3;
+import fj.Unit;
 import org.junit.Test;
 import org.slf4j.Logger;
 import rx.Observable;
@@ -14,48 +16,72 @@ import java.io.File;
 import java.io.IOException;
 import java.nio.file.*;
 
+import static com.github.mperry.watch.Util.generateEvents;
+import static fj.data.Option.some;
+import static java.lang.String.format;
 import static java.lang.Thread.sleep;
 
 /**
  * Created by MarkPerry on 11/08/2014.
  */
-public class Test2 {
+public class TestActive {
 
-	static Logger log = Util.logger(Test2.class);
+	static final Logger log = Util.logger(TestActive.class);
 
 	void println(Object o) {
 		log.info(o.toString());
 	}
 
-	@Test
-	public void test1() {
-		Observable.from(1, 2, 3).subscribe(i -> println(i));
-	}
 
-	P3<WatchService, WatchKey, Observable<WatchEvent<Path>>> create() throws IOException {
+
+	P3<WatchService, WatchKey, Observable<WatchEvent<Path>>> createActive() throws IOException {
 		File dir = new File(".");
-		println(String.format("monitoring dir: %s", dir.getAbsolutePath()));
+		println(format("monitoring dir: %s", dir.getAbsolutePath()));
 		return Rx.createDirect(dir, Util.ALL_EVENTS);
 	}
 
-//	@Test
-	public void test2() throws IOException {
-		P3<WatchService, WatchKey, Observable<WatchEvent<Path>>> p = create();
 
-		p._3().take(5).forEach(we -> {
-			println(String.format("Watch event, context: %s kind: %s", we.context(), we.kind()));
-		});
-		p._1().close();
+    public <A> void createOnNewThread(F<Observable<WatchEvent<Path>>, Unit> f) {
+        Runnable r = () -> {
+            try {
+                Util.printThread();
+                f.f(createActive()._3());
+                log.info("called func");
+
+            } catch (IOException e) {
+                log.error(e.getMessage(), e);
+            }
+        };
+        new Thread(r).start();
+//        r.run();
+    }
+
+    public <A> void createOnNewTread() {
+        createOnNewThread(o -> Unit.unit());
+    }
+
+
+    @Test
+	public void testCreateActive() throws IOException {
+        Util.printThread();
+		createOnNewThread(o -> {
+            log.info(format("Receiving on id: %s", Util.threadId()));
+            o.take(5).forEach(we -> Util.printWatchEvent(we));
+            return Unit.unit();
+        });
+        Util.sleep(1000);
+        generateEvents(10, some(500));
+        Util.sleep(1000);
 	}
 
 	void printWatchEvent(WatchEvent<Path> we) {
-		println(String.format("Watch event, kind: %s, context: %s", we.kind(), we.context()));
+		println(format("Watch event, kind: %s, context: %s", we.kind(), we.context()));
 	}
 
 //	@Test
 	public void test3() {
 		try {
-			P3<WatchService, WatchKey, Observable<WatchEvent<Path>>> p = create();
+			P3<WatchService, WatchKey, Observable<WatchEvent<Path>>> p = createActive();
 			println("subscribing...");
 			Subscription s = p._3().subscribeOn(Schedulers.computation()).subscribe(we -> printWatchEvent(we), t -> {
 				log.info("Observable error...");
@@ -81,7 +107,7 @@ public class Test2 {
 //	@Test
 	public void test4() throws IOException, InterruptedException {
 		File dir = new File(".");
-		println(String.format("monitoring dir: %s", dir.getAbsolutePath()));
+		println(format("monitoring dir: %s", dir.getAbsolutePath()));
 //		WatchService s = FileSystems.getDefault().newWatchService();
 		P2<WatchService, WatchKey> s = Rx.register(dir, Util.ALL_EVENTS);
 		Observable<WatchEvent<Path>> o = Rx.observableActive(s._1(), s._2())._1();
