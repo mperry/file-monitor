@@ -1,11 +1,12 @@
 
 apply plugin: 'java'
 apply plugin: 'maven'
+apply plugin: "signing"
 
 defaultTasks "build"
 
 ext {
-    isSnapshot = true
+    isSnapshot = false
     baseVersion = "0.1"
     snap = "-SNAPSHOT"
 }
@@ -58,7 +59,28 @@ Boolean doSigning() {
     signingEnabled.trim() == "true"
 }
 
-//uploadArchives.enabled = false
+
+task javadocJar(type: Jar, dependsOn: "javadoc") {
+	classifier = 'javadoc'
+	from "build/docs/javadoc"
+}
+
+task sourcesJar(type: Jar) {
+	from sourceSets.main.allSource
+	classifier = 'sources'
+}
+
+artifacts {
+	archives jar
+	archives javadocJar
+	archives sourcesJar
+}
+
+signing {
+	sign configurations.archives
+}
+
+uploadArchives.enabled = true
 uploadArchives {
     repositories {
         mavenDeployer {
