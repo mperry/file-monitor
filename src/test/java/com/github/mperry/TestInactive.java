@@ -34,7 +34,7 @@ public class TestInactive {
 
     @Test
     public void testSimpleSubscribe() {
-        Observable.from(1, 2, 3).subscribe(i -> println(i));
+        Observable.just(1, 2, 3).subscribe(i -> println(i));
     }
 
     @Test

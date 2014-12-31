@@ -133,7 +133,7 @@ public class FileMonitor {
 	}
 
 	public static IO<Validation<String, Seq<WatchEvent<Path>>>> processNextKeyIO(final WatchService s, final WatchKey k) {
-		return IOFunctions.unit(P.lazy(u -> processNextKey(s, k)));
+		return IOFunctions.lazy((Unit u) -> processNextKey(s, k));
 	}
 
 	public static IO<Seq<WatchEvent<Path>>> processNextKeySimpleIO(final WatchService s, final WatchKey k) {
@@ -145,7 +145,7 @@ public class FileMonitor {
 	}
 
 	public <A> IO<Unit> runStreamIo(final WatchService s, final WatchKey k, F<Seq<WatchEvent<Path>>, A> f) {
-		return IOFunctions.unit(P.lazy(u -> {
+		return IOFunctions.lazy(u -> {
 			Runnable r = () -> streamIo(s, k).foreach(io -> {
 				try {
 					Seq<WatchEvent<Path>> seq = io.run();
@@ -157,7 +157,7 @@ public class FileMonitor {
 			});
 			r.run();
 			return Unit.unit();
-		}));
+		});
 	}
 
 	public static Stream<Seq<WatchEvent<Path>>> stream(final WatchService s, final WatchKey k) throws IOException {
