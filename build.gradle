@@ -1,13 +1,23 @@
 
+buildscript {
+    repositories {
+        mavenCentral()
+    }
+    dependencies {
+        classpath 'me.tatarka:gradle-retrolambda:2.5.0'
+    }
+}
+
 apply plugin: 'java'
 apply plugin: 'maven'
 apply plugin: "signing"
+apply plugin: "me.tatarka.retrolambda"
 
 defaultTasks "build"
 
 ext {
-    isSnapshot = false
-    baseVersion = "0.1"
+    baseVersion = "0.2"
+    isSnapshot = true
     snap = "-SNAPSHOT"
 }
 
@@ -54,6 +64,14 @@ dependencies {
 
     testCompile 'junit:junit:4.11'
 }
+
+
+retrolambda {
+    jdk System.getenv("JAVA8_HOME")
+    oldJdk System.getenv("JAVA7_HOME")
+    javaVersion JavaVersion.VERSION_1_7
+}
+
 
 Boolean doSigning() {
     signingEnabled.trim() == "true"

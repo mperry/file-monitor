@@ -72,7 +72,7 @@ public class Util {
 
     public static void generateEvents(int n, File f, Option<Integer> optionSleep) {
         for (int i = 0; i < n; i++) {
-            optionSleep.forEach(t -> sleep(t));
+            optionSleep.foreachDoEffect(t -> sleep(t));
             createEvent(f);
         }
     }

@@ -33,7 +33,7 @@ public class TestStream {
             Util.generateEventsAsync(100, some(500));
             log.info("getting stream...");
             Stream<WatchEvent<Path>> s = streamP1._1();
-            s.take(5).forEach(we -> Util.printWatchEvent(we));
+            s.take(5).foreachDoEffect(we -> Util.printWatchEvent(we));
         } catch (IOException e) {
             log.error(e.getMessage(), e);
         }
