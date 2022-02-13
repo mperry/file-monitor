@@ -87,10 +87,7 @@ public class FileMonitor {
         return P.lazy(u -> Observable.from(streamOptionEvent(s, k)._1()));
     }
 
-	/**
-	 * Process events on key
-	 * @param key
-	 */
+	// Process events on key
 	public static Seq<WatchEvent<Path>> processEventSeq(WatchKey key) {
 		Seq<WatchEvent<Path>> result = Seq.<WatchEvent<Path>>empty();
 		for (WatchEvent<?> event : key.pollEvents()) {
@@ -119,7 +116,7 @@ public class FileMonitor {
 
 	/**
 	 * Process the next key on the watch service
-	 * @param s
+	 * @param s The watch service
 	 * @param k Key for the watch service
 	 * @return Fail if the watch service key is invalid or interrupted otherwise success with the sequence of watch events.
 	 */

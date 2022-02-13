@@ -63,15 +63,18 @@ public class TestActive {
 
     @Test
 	public void testCreateActive() throws IOException {
+		int sleepTime = 100;
+		int sleepBetweenEvents = 200;
+		int eventCount = 10;
         Util.printThread();
 		createOnNewThread(o -> {
             log.info(format("Receiving on id: %s", Util.threadId()));
             o.take(5).forEach(we -> Util.printWatchEvent(we));
             return Unit.unit();
         });
-        Util.sleep(1000);
-        generateEvents(10, Util.EVENT_FILE, some(500));
-        Util.sleep(1000);
+        Util.sleep(sleepTime);
+        generateEvents(eventCount, Util.EVENT_FILE, some(sleepBetweenEvents));
+        Util.sleep(sleepTime);
 	}
 
 	void printWatchEvent(WatchEvent<Path> we) {
